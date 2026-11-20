@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>收藏到 Paul 素材库</title>
+  <link rel="stylesheet" href="capture.css" />
+  <script src="capture.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>收藏图片</h1>
+    <p id="hint" hidden>在网页图片上右击，再选「收藏图片到 Paul 素材库」。</p>
+    <form id="capture" hidden>
+      <div class="field">
+        <label for="source">来源网页</label>
+        <a id="source" target="_blank" rel="noreferrer noopener"></a>
+      </div>
+      <div class="field">
+        <label for="name">素材名称</label>
+        <input id="name" required maxlength="60" />
+      </div>
+      <div class="field">
+        <label for="folder">保存到</label>
+        <select id="folder"><option value="">未归类</option></select>
+      </div>
+      <div class="field">
+        <label for="tags">标签</label>
+        <div class="tag-input">
+          <input id="tags" list="known-tags" placeholder="选择或输入标签" autocomplete="off" maxlength="160" />
+          <button id="add-tag" type="button">添加</button>
+        </div>
+        <datalist id="known-tags"></datalist>
+        <div id="chosen-tags" class="chosen-tags" aria-label="已选标签"></div>
+      </div>
+      <div class="actions">
+        <button id="save" type="submit" class="primary">收藏</button>
+        <a id="open-library" target="_blank" rel="noreferrer noopener" hidden>打开素材库</a>
+      </div>
+    </form>
+    <p id="status" role="status" aria-live="polite"></p>
+  </main>
+</body>
+</html>

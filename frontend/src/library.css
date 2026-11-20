@@ -1,0 +1,29 @@
+:root {
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
+  color: #e5eaf3;
+  background: #161a21;
+  --panel: #1d232d;
+  --line: #323c4a;
+  --text-muted: #a8b4c7;
+  --focus: #b5e3f2;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+button, input, select { font: inherit; }
+button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+a { color: #b8dceb; }
+p { margin-block: 0; }
+#paul-workspace { height: 100dvh; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+.photo-source[hidden] { display: none; }
+.photo-source { padding: 12px 10px; color: #edf4fa; align-self: start; background: #1d232d; }
+.photo-source summary { cursor: pointer; }
+.photo-source a { display: block; max-width: min(270px, 52vw); padding: 4px 0; overflow-wrap: anywhere; }

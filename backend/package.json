@@ -1,0 +1,11 @@
+{
+  "name": "paul-library-service",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "4.22.1"
+  }
+}
