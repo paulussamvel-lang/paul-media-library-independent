@@ -21,11 +21,18 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue';
+import { reactive, watch } from 'vue';
 defineOptions({ name: 'FolderNavigation' });
-defineProps({ folders: { type: Array, required: true }, active: String });
+const props = defineProps({ folders: { type: Array, required: true }, active: String });
 defineEmits(['choose']);
 const open = reactive(new Set());
+const contains = (branches, id) => branches.some(folder =>
+  folder.id === id || (folder.children?.length && contains(folder.children, id)));
+watch(() => [props.active, props.folders], ([id, folders]) => {
+  for (const folder of folders) {
+    if (folder.children?.length && contains(folder.children, id)) open.add(folder.id);
+  }
+}, { immediate: true });
 function toggle(id) {
   if (open.has(id)) open.delete(id);
   else open.add(id);

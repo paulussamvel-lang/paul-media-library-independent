@@ -11,13 +11,38 @@
         </n-button>
       </header>
       <nav class="nav-content" aria-label="文件夹">
+        <div v-if="entry?.canOrganize" class="folder-actions">
+          <n-button size="tiny" quaternary aria-label="新建文件夹" @click="editFolder()">新建文件夹</n-button>
+          <n-button v-if="ordinarySelection" size="tiny" quaternary aria-label="改名当前文件夹"
+            @click="editFolder(selected)">改名</n-button>
+        </div>
+        <form v-if="folderEdit" class="folder-edit" @submit.prevent="submitFolder">
+          <label for="folder-name">{{ folderEdit.id ? '修改文件夹名称' : '文件夹名称' }}</label>
+          <n-input ref="folderInput" v-model:value="folderEdit.name" size="small" :maxlength="160"
+            :input-props="{ id: 'folder-name' }" :disabled="savingFolder" />
+          <label v-if="!folderEdit.id" for="folder-parent">上级文件夹</label>
+          <select v-if="!folderEdit.id" id="folder-parent" v-model="folderEdit.parentId" :disabled="savingFolder">
+            <option :value="null">顶层</option>
+            <option v-for="item in folderChoices" :key="item.id" :value="item.id">{{ item.path }}</option>
+          </select>
+          <p v-if="folderError" class="folder-error" role="status">{{ folderError }}</p>
+          <div class="folder-edit-buttons">
+            <n-button size="tiny" :disabled="savingFolder" @click="folderEdit = null">取消</n-button>
+            <n-button size="tiny" attr-type="submit" type="primary" :loading="savingFolder"
+              :disabled="!folderEdit.name.trim()">保存文件夹</n-button>
+          </div>
+        </form>
         <FolderNavigation :folders="folders" :active="selected?.id" @choose="select" />
+        <div v-if="entry?.type === 'managed'" class="trash-navigation">
+          <FolderNavigation :folders="[trashFolder]" :active="selected?.id" @choose="select" />
+        </div>
         <SmartFolders v-if="entry?.type === 'managed'" :folders="folders" :selected-id="selected?.id"
           :can-edit="entry.canOrganize" @select="select" @removed="restoreSelection"/>
       </nav>
     </aside>
     <section class="workspace-content" aria-label="素材">
-      <AssetShelf v-if="selected" :key="selected.kind === 'smart' ? `${selected.id}:${selected.version}` : 'folders'"
+      <AssetShelf v-if="selected" :key="selected.kind === 'smart' ? `${selected.id}:${selected.version}` :
+        selected.id === '__trash__' ? 'trash' : 'folders'"
         :folder="selected" :folders="folders" :writable="entry.canOrganize"
         :compact="compact" @expand="setCompact(false)" />
       <div v-else class="workspace-message">
@@ -37,18 +62,26 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
-import { darkTheme, NButton, NConfigProvider, NModal } from 'naive-ui';
+import { computed, nextTick, onMounted, ref } from 'vue';
+import { darkTheme, NButton, NConfigProvider, NInput, NModal } from 'naive-ui';
 import AssetShelf from './components/AssetShelf.vue';
 import FolderNavigation from './components/FolderNavigation.vue';
 import SmartFolders from './components/SmartFolders.vue';
-import { getConfig, getFolders } from './api/index.js';
+import { getConfig, getFolders, saveFolder } from './api/index.js';
+import { folderOptions } from './folders.js';
 
 const folders = ref([]);
 const selected = ref(null);
 const entry = ref(null);
 const failure = ref('');
 const information = ref(false);
+const folderEdit = ref(null);
+const folderInput = ref(null);
+const folderError = ref('');
+const savingFolder = ref(false);
+const trashFolder = { id: '__trash__', name: '回收站' };
+const folderChoices = computed(() => folderOptions(folders.value));
+const ordinarySelection = computed(() => folderChoices.value.some(({ id }) => id === selected.value?.id));
 const compact = ref(localStorage.getItem('paul-library-nav') === 'compact' ||
   localStorage.getItem('eagle-web-sidebar-collapsed') === '1');
 
@@ -60,6 +93,38 @@ function setCompact(value) {
   compact.value = value;
   localStorage.setItem('paul-library-nav', value ? 'compact' : 'full');
   localStorage.removeItem('eagle-web-sidebar-collapsed');
+}
+
+async function editFolder(folder) {
+  if (savingFolder.value) return;
+  folderError.value = '';
+  folderEdit.value = folder ? { id: folder.id, name: folder.name } :
+    { name: '', parentId: ordinarySelection.value ? selected.value.id : null };
+  await nextTick();
+  folderInput.value?.focus();
+}
+
+async function submitFolder() {
+  if (savingFolder.value || !folderEdit.value.name.trim()) return;
+  folderError.value = '';
+  savingFolder.value = true;
+  try {
+    const { id, folders: listing } = await saveFolder({ ...folderEdit.value });
+    folders.value = listing;
+    const find = tree => {
+      for (const folder of tree) {
+        if (folder.id === id) return folder;
+        const child = folder.children && find(folder.children);
+        if (child) return child;
+      }
+    };
+    select(find(listing) ?? listing[0]);
+    folderEdit.value = null;
+  } catch (error) {
+    folderError.value = error.message;
+  } finally {
+    savingFolder.value = false;
+  }
 }
 
 async function initialize() {
@@ -83,6 +148,13 @@ onMounted(initialize);
 .nav-heading { min-height: 56px; display: flex; gap: 4px; align-items: center; padding-inline: 10px; border-bottom: 1px solid var(--line); }
 .nav-heading strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
 .nav-content { padding: 10px; overflow: auto; }
+.folder-actions, .folder-edit-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.folder-actions { justify-content: space-between; margin-bottom: 6px; }
+.folder-edit { display: grid; gap: 6px; min-width: 0; padding: 8px 4px 10px; font-size: .8125rem; }
+.folder-edit select { width: 100%; min-height: 28px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: inherit; }
+.folder-edit-buttons { margin-top: 3px; justify-content: flex-end; }
+.folder-error { margin: 0; color: #ffb5ab; }
+.trash-navigation { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
 .workspace-content { min-width: 0; flex: 1; display: flex; }
 .workspace-message { margin: auto; text-align: center; color: var(--text-muted); }
 .workspace-message button { margin-top: 10px; }

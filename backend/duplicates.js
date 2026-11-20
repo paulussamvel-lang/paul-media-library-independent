@@ -15,7 +15,8 @@ class DuplicateStore {
     );`);
     this.pending = db.prepare(`SELECT a.id,a.name,a.width,a.height,a.ext,a.thumbnail_name IS NOT NULL AS hasThumbnail
       FROM assets a LEFT JOIN image_signatures s ON s.asset_id=a.id
-      WHERE s.asset_id IS NULL AND lower(a.ext) IN (${IMAGE_TYPES}) ORDER BY a.id`);
+      WHERE s.asset_id IS NULL AND lower(a.ext) IN (${IMAGE_TYPES})
+        AND NOT EXISTS (SELECT 1 FROM trashed_assets t WHERE t.asset_id = a.id) ORDER BY a.id`);
     this.save = db.prepare(`INSERT OR IGNORE INTO image_signatures
       SELECT id,?,?,?,?,? FROM assets WHERE id=? AND lower(ext) IN (${IMAGE_TYPES})`);
     this.findIndexed = db.prepare('SELECT 1 FROM image_signatures WHERE asset_id=?');
@@ -51,15 +52,20 @@ class DuplicateStore {
 
   report() {
     const groups = new Map();
-    const exact = this.db.prepare(`SELECT a.id,a.name,a.ext,a.sha256,a.byte_size AS bytes
-      FROM assets a WHERE a.sha256 IN (SELECT sha256 FROM assets GROUP BY sha256 HAVING count(*) > 1)
+    const exact = this.db.prepare(`WITH active AS (
+      SELECT * FROM assets a WHERE NOT EXISTS (SELECT 1 FROM trashed_assets t WHERE t.asset_id = a.id)
+      )
+      SELECT a.id,a.name,a.ext,a.sha256,a.byte_size AS bytes
+      FROM active a WHERE a.sha256 IN (SELECT sha256 FROM active GROUP BY sha256 HAVING count(*) > 1)
       ORDER BY a.sha256,a.btime,a.id`).all();
     for (const { sha256, ...asset } of exact) {
       if (!groups.has(sha256)) groups.set(sha256, []);
       groups.get(sha256).push(asset);
     }
     const indexed = this.db.prepare(`SELECT s.*,a.name,a.ext,a.sha256 FROM image_signatures s
-      JOIN assets a ON a.id=s.asset_id ORDER BY a.btime DESC,s.asset_id`).all();
+      JOIN assets a ON a.id=s.asset_id
+      WHERE NOT EXISTS (SELECT 1 FROM trashed_assets t WHERE t.asset_id = a.id)
+      ORDER BY a.btime DESC,s.asset_id`).all();
     const ignored = new Set(this.db.prepare('SELECT first_id,second_id FROM ignored_similar_pairs')
       .all().map(({ first_id, second_id }) => `${first_id}:${second_id}`));
     return { exact: [...groups.values()], indexed: indexed.length, pending: this.pending.all().length,

@@ -1,6 +1,6 @@
 {
   "name": "paul-media-library-desktop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "Desktop window for the local media library",
   "main": "main.js",

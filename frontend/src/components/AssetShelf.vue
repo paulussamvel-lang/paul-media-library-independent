@@ -3,7 +3,7 @@
     <header class="shelf-heading">
       <n-button v-if="compact" size="small" secondary aria-label="展开侧边栏" @click="$emit('expand')">文件夹</n-button>
       <h1>{{ folder.name }}</h1>
-      <label v-if="!smart && folder.id !== '__all__'" class="subfolders">
+      <label v-if="!smart && !trash && folder.id !== '__all__'" class="subfolders">
         <input v-model="children" type="checkbox" />包含子文件夹
       </label>
     </header>
@@ -30,9 +30,9 @@
       </fieldset>
     </section>
     <BatchOrganizer v-if="writable" :selecting="picking" :ids="busy ? [] : selectedIds"
-      :total="busy ? 0 : filtered.length" :folders="folders" @toggle="switchSelection"
+      :total="busy ? 0 : filtered.length" :folders="folders" :trash="trash" @toggle="switchSelection"
       @select-all="selectResults" @clear="selection.clear()" @change="refresh++" />
-    <LibraryTools v-if="writable" :folders="folders" :selected-folder-id="folder.id" @change="refresh++" />
+    <LibraryTools v-if="writable && !trash" :folders="folders" :selected-folder-id="folder.id" @change="refresh++" />
 
     <section ref="frame" class="asset-scroll" aria-label="素材结果" :aria-busy="busy" @scroll="recordScroll">
       <div class="empty-message" v-if="busy" role="status">正在读取素材…</div>
@@ -40,7 +40,7 @@
         <p>无法读取这个文件夹。</p><n-button size="small" @click="refresh++">重试</n-button>
       </div>
       <div class="empty-message" v-else-if="!filtered.length" role="status">
-        {{ tempoFilter ? '没有符合 BPM 条件的音频' : '没有找到素材' }}
+        {{ tempoFilter ? '没有符合 BPM 条件的音频' : trash && !text ? '回收站为空' : '没有找到素材' }}
       </div>
       <div v-else class="shelf-plane" :style="{ height: `${layout.height}px` }">
         <button v-for="position in onscreen" :key="position.asset.id" type="button"
@@ -88,6 +88,7 @@ defineEmits(['expand']);
 const full = shallowRef([]);
 const player = ref(null);
 const smart = computed(() => props.folder.kind === 'smart');
+const trash = computed(() => props.folder.id === '__trash__');
 const children = ref(false);
 const query = ref('');
 const text = ref('');
@@ -100,7 +101,7 @@ const high = ref('');
 const order = ref('recent');
 const picking = ref(false);
 const selection = reactive(new Set());
-const selectedIds = computed(() => [...selection]);
+const selectedIds = computed(() => filtered.value.filter(asset => selection.has(asset.id)).map(asset => asset.id));
 const busy = computed(() => reading.value || text.value !== query.value.trim());
 const frame = ref(null);
 const scroll = reactive({ offset: 0, width: 0, height: 0 });
@@ -211,7 +212,7 @@ function labelOf(asset) {
   return action + ' ' + asset.name;
 }
 function draggable(asset) {
-  return !picking.value && asset.kind !== 'file' && typeof window.mediaLibrary?.startDrag === 'function';
+  return !trash.value && !picking.value && asset.kind !== 'file' && typeof window.mediaLibrary?.startDrag === 'function';
 }
 function drag(asset, event) {
   stopAudition();
@@ -279,4 +280,5 @@ function showFallback(asset, event) {
 .card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .card-format { color: var(--text-muted); font-size: .68rem; }
 .selection-tag { position: absolute; inset: 5px 6px auto auto; background: #abdee8; color: #18212a; border-radius: 3px; padding: 2px 5px; font-size: .7rem; }
+.asset-audio[aria-pressed='true'] :deep(.audio-metadata) { padding-right: 32px; }
 </style>

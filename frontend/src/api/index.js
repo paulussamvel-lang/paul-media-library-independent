@@ -21,6 +21,7 @@ export const getConfig = () => request('config');
 export const getOrganization = () => request('organization');
 export const getSmartFolders = () => request('smart-folders');
 export const saveOrganization = (action, data) => submit('organization/' + action, data);
+export const saveFolder = data => submit('organization/folder', data);
 export const saveSmartFolder = (action, data) => submit('smart-folders/' + action, data);
 export const importFile = data => submit('import/file', data);
 export const getDuplicates = (needsIndex = false) => request(needsIndex ? 'duplicates/pending' : 'duplicates');

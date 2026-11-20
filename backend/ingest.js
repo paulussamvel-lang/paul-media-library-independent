@@ -50,7 +50,8 @@ class IngestStore {
       asset_id TEXT NOT NULL REFERENCES assets(id), url TEXT NOT NULL, PRIMARY KEY(asset_id,url)
     );`);
     this.asset = db.prepare('SELECT id,name,sha256,source_url FROM assets WHERE id=?');
-    this.byHash = db.prepare('SELECT id,name,original_name,source_url FROM assets WHERE sha256=? ORDER BY btime,id');
+    this.byHash = db.prepare(`SELECT id,name,original_name,source_url FROM assets a WHERE sha256=?
+      AND NOT EXISTS (SELECT 1 FROM trashed_assets t WHERE t.asset_id = a.id) ORDER BY btime,id`);
     this.receipt = db.prepare('SELECT asset_id,request_hash,reused FROM capture_receipts WHERE request_id=?');
     this.saveReceipt = db.prepare('INSERT INTO capture_receipts VALUES (?,?,?,?)');
     this.addAsset = db.prepare(`INSERT INTO assets (id,name,ext,width,height,btime,source_url,original_name,

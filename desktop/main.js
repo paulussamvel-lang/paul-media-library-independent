@@ -19,8 +19,8 @@ async function checkViewer() {
   if (!response) return false;
   const config = response.ok ? await response.json().catch(() => null) : null;
   if (config?.activeLibrary?.path !== library || config?.activeLibrary?.type !== 'managed' ||
-      !config.activeLibrary.canOrganize) {
-    throw new Error('端口 13003 正在显示其他素材库。关闭该查看器后再启动桌面版。');
+      !config.activeLibrary.canOrganize || config.organizationVersion !== 2) {
+    throw new Error('端口 13003 正在运行另一个素材库查看器。请先关闭它，再打开桌面版。');
   }
   return true;
 }
@@ -88,9 +88,10 @@ async function openLibrary() {
   library = fs.realpathSync(selected);
   const db = new DatabaseSync(path.join(library, 'library.sqlite'), { readOnly: true });
   db.exec('PRAGMA busy_timeout = 1000');
-  const findAsset = db.prepare('SELECT original_name FROM assets WHERE id = ?');
   app.once('will-quit', () => db.close());
   await ensureViewer();
+  const findAsset = db.prepare(`SELECT original_name FROM assets a WHERE id = ?
+    AND NOT EXISTS (SELECT 1 FROM trashed_assets t WHERE t.asset_id = a.id)`);
   const icon = await app.getFileIcon(__filename, { size: 'normal' });
 
   const window = mainWindow = new BrowserWindow({

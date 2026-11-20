@@ -56,6 +56,7 @@ api.get('/config', respond(() => ({
   libraries: runtime.libraries,
   activeLibraryIndex: runtime.index,
   activeLibrary: { ...runtime.entry, index: runtime.index, canOrganize: Boolean(organizer) },
+  organizationVersion: organizer ? 2 : 0,
 })));
 api.get('/libraries', respond(() => runtime.libraries));
 api.get('/folders', respond(() => library.getFolders()));
@@ -94,6 +95,10 @@ if (organizer) {
   api.get('/duplicates/pending', respond(() => duplicates.pending.all()));
   api.post('/organization/apply', guardLocal, json, respond(request => organizer.apply(request.body)));
   api.post('/organization/undo', guardLocal, json, respond(request => organizer.undo(request.body)));
+  api.post('/organization/folder', guardLocal, json, respond(request => {
+    const id = organizer.saveFolder(request.body);
+    return { id, folders: library.getFolders() };
+  }));
   api.post('/smart-folders/save', guardLocal, json, respond(request => smartFolders.save(request.body)));
   api.post('/smart-folders/remove', guardLocal, json, respond(request => smartFolders.removeRule(request.body)));
   api.post('/duplicates/index', guardLocal, json, respond(request => duplicates.index(request.body.entries)));

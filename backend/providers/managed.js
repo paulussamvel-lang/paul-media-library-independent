@@ -24,6 +24,8 @@ class ManagedProvider {
     }
     const hasSources = this.db.prepare("SELECT 1 FROM sqlite_schema WHERE name = 'asset_sources'").get();
     const sourcesColumn = hasSources ? `(SELECT json_group_array(url) FROM asset_sources WHERE asset_id = a.id)` : "'[]'";
+    const hasTrash = this.db.prepare("SELECT 1 FROM sqlite_schema WHERE name = 'trashed_assets'").get();
+    const trashedAt = hasTrash ? 't.trashed_at' : 'NULL';
     this.listFiles = this.db.prepare(`
       WITH RECURSIVE options(folder_id, include_children, extension, tag, minimum_rating) AS (SELECT ?, ?, ?, lower(?), ?),
       needles(needle) AS (SELECT lower(?) UNION SELECT lower(?)),
@@ -40,10 +42,13 @@ class ManagedProvider {
              CASE WHEN a.ext IN ('mp3','m4a','aac','wav','ogg','oga','opus','flac','aif','aiff') AND json_valid(a.source_json)
                   THEN json_extract(a.source_json, '$.bpm') END AS bpm,
              (SELECT json_group_array(t.tag) FROM asset_tags t WHERE t.asset_id = a.id) AS tags
-      FROM assets a CROSS JOIN options o
-      WHERE (o.folder_id = '__all__' OR a.id IN (
+      FROM assets a
+      ${hasTrash ? 'LEFT JOIN trashed_assets t ON a.id = t.asset_id' : ''}
+      CROSS JOIN options o
+      WHERE ((o.folder_id = '__trash__' AND ${trashedAt} IS NOT NULL) OR
+        (${trashedAt} IS NULL AND (o.folder_id = '__all__' OR a.id IN (
         SELECT af.asset_id FROM asset_folders af JOIN selected s ON af.folder_id = s.id
-      ))
+      ))))
       AND (o.extension = '' OR lower(a.ext) = o.extension)
       AND (o.minimum_rating = 0 OR coalesce(a.rating, 0) >= o.minimum_rating)
       AND (o.tag = '' OR EXISTS (SELECT 1 FROM asset_tags t WHERE t.asset_id = a.id AND lower(t.tag) = o.tag))
@@ -52,13 +57,13 @@ class ManagedProvider {
           AND instr(lower(coalesce(a.notes, '')), n.needle) = 0
           AND NOT EXISTS (SELECT 1 FROM asset_tags t WHERE t.asset_id = a.id AND instr(lower(t.tag), n.needle) > 0)
       )
-      ORDER BY a.btime DESC, a.id
+      ORDER BY coalesce(${trashedAt}, a.btime) DESC, a.id
     `);
     this.getFile = this.db.prepare('SELECT original_name, thumbnail_name FROM assets WHERE id = ?');
   }
 
   getFolders() {
-    const rows = this.db.prepare('SELECT id, parent_id, name FROM folders ORDER BY position').all();
+    const rows = this.db.prepare('SELECT id, parent_id, name FROM folders ORDER BY position, id').all();
     const nodes = new Map(rows.map(({ id, name }) => [id, { id, name, children: [] }]));
     const roots = [];
     for (const { id, parent_id: parent } of rows) {
