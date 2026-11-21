@@ -39,3 +39,7 @@ zsh desktop/package-macos.zsh
 ## 兼容性
 
 这版独立实现了库服务入口、Eagle 旧库适配器、应用导航、素材视图和 Web 客户端。保留 Paul 素材库数据库结构和浏览器扩展使用的本地接口。原版本曾基于 [eagle-web](https://github.com/aspi-rin/eagle-web) 的提交 `bd3ecf3168868723bd5228bf93b890a5228a9a2c`。
+
+## 许可证
+
+本仓库的项目代码采用 [MIT 许可证](LICENSE)。第三方依赖各自适用其原许可证。
