@@ -1,12 +1,41 @@
 :root {
   color-scheme: dark;
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
-  color: #e5eaf3;
-  background: #161a21;
-  --panel: #1d232d;
-  --line: #323c4a;
-  --text-muted: #a8b4c7;
-  --focus: #b5e3f2;
+  color: var(--text);
+  background: var(--ground);
+  --ground: #212724;
+  --panel: #191f1c;
+  --surface: #2a322d;
+  --hover: #303b34;
+  --line: #435047;
+  --text: #eef1eb;
+  --text-muted: #b3beb4;
+  --accent: #cfe47f;
+  --accent-ink: #1b2613;
+  --selected: #394532;
+  --danger: #ffb8ac;
+  --wave-brightness: 1.45;
+  --focus: var(--accent);
+}
+
+:root[data-palette='midnight'] {
+  --ground: #191f2c; --panel: #151b28; --surface: #232d3e; --hover: #2c3b51; --line: #40506b;
+  --text: #ecf2fc; --text-muted: #b3c0d7; --accent: #a8cdff; --accent-ink: #13243d; --selected: #303f59;
+}
+:root[data-palette='amber'] {
+  --ground: #28211d; --panel: #201a17; --surface: #352b25; --hover: #40332b; --line: #574437;
+  --text: #f5eee6; --text-muted: #c9b7a9; --accent: #f2bb75; --accent-ink: #352011; --selected: #483725;
+}
+:root[data-palette='dusk'] {
+  --ground: #252230; --panel: #1e1b28; --surface: #312b41; --hover: #3b334e; --line: #534866;
+  --text: #f3edf8; --text-muted: #c4b9d3; --accent: #d0b9fc; --accent-ink: #271b35; --selected: #423653;
+}
+:root[data-palette='mist'] {
+  color-scheme: light;
+  --ground: #f6f4ef; --panel: #ece9e1; --surface: #fffdf8; --hover: #e7e6dc; --line: #cfcbbf;
+  --text: #292d26; --text-muted: #565e51; --accent: #43602d; --accent-ink: #ffffff; --selected: #dfe8d4;
+  --danger: #9a3025;
+  --wave-brightness: .65;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -16,7 +45,9 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-a { color: #b8dceb; }
+a { color: var(--accent); }
+input[type='checkbox'], input[type='range'], progress { accent-color: var(--accent); }
+::selection { color: var(--accent-ink); background: var(--accent); }
 p { margin-block: 0; }
 #paul-workspace { height: 100dvh; }
 .sr-only {

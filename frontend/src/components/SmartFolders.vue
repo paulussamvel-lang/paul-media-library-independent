@@ -142,27 +142,27 @@ function remove() {
 </script>
 
 <style scoped>
-.smart-folders { margin-top: 14px; padding: 8px 4px 0; border-top: 1px solid #303039; }
+.smart-folders { margin-top: 14px; padding: 8px 4px 0; border-top: 1px solid var(--line); }
 .smart-header, .smart-item, .smart-actions { display: flex; align-items: center; gap: 8px; }
 .smart-header { justify-content: space-between; }
-.smart-header h2, .smart-muted { color: #b6b6c4; font-size: 0.75rem; font-weight: 600; }
+.smart-header h2, .smart-muted { color: var(--text-muted); font-size: 0.75rem; font-weight: 600; }
 .smart-header h2 { padding-left: 6px; }
 .smart-list { display: grid; gap: 2px; margin: 5px 0 0; padding: 0; list-style: none; }
 .smart-link {
   flex: 1; min-width: 0; padding: 4px 7px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  text-align: left; color: #e6e6ed; border: 0; border-radius: 4px; background: transparent; cursor: pointer;
+  text-align: left; color: var(--text); border: 0; border-radius: 4px; background: transparent; cursor: pointer;
 }
-.smart-link:hover { background: #30303c; }
-.smart-link[aria-current='true'] { background: #283c38; color: #c3eed8; }
-.smart-link:focus-visible, .smart-field select:focus-visible { outline: 2px solid #a5bfff; outline-offset: 1px; }
+.smart-link:hover { background: var(--hover); }
+.smart-link[aria-current='true'] { background: var(--selected); color: var(--accent); }
+.smart-link:focus-visible, .smart-field select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .smart-modal { width: min(515px, calc(100vw - 24px)); }
 .smart-form, .smart-field { display: grid; gap: 6px; }
 .smart-form { gap: 12px; }
-.smart-field { min-width: 0; color: #c6c6d0; font-size: 0.8125rem; }
-.smart-field select { width: 100%; min-height: 34px; padding: 4px 7px; border: 1px solid #484854; border-radius: 4px; color: #e6e6ed; background: #222229; color-scheme: dark; }
+.smart-field { min-width: 0; color: var(--text-muted); font-size: 0.8125rem; }
+.smart-field select { width: 100%; min-height: 34px; padding: 4px 7px; border: 1px solid var(--line); border-radius: 4px; color: var(--text); background: var(--surface); }
 .scope-checkbox { display: flex; align-items: center; gap: 6px; }
 .smart-rule-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr)); gap: 9px; }
-.smart-error { margin: 0; color: #ffb5ab; }
+.smart-error { margin: 0; color: var(--danger); }
 .smart-actions { flex-wrap: wrap; }
 .smart-spacer { flex: 1; }
 </style>

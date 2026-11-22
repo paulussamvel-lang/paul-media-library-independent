@@ -41,7 +41,8 @@ class ManagedProvider {
                   THEN json_extract(a.source_json, '$.duration') END AS duration,
              CASE WHEN a.ext IN ('mp3','m4a','aac','wav','ogg','oga','opus','flac','aif','aiff') AND json_valid(a.source_json)
                   THEN json_extract(a.source_json, '$.bpm') END AS bpm,
-             (SELECT json_group_array(t.tag) FROM asset_tags t WHERE t.asset_id = a.id) AS tags
+             (SELECT json_group_array(t.tag) FROM asset_tags t WHERE t.asset_id = a.id) AS tags,
+             (SELECT json_group_array(af.folder_id) FROM asset_folders af WHERE af.asset_id = a.id) AS folderIds
       FROM assets a
       ${hasTrash ? 'LEFT JOIN trashed_assets t ON a.id = t.asset_id' : ''}
       CROSS JOIN options o
@@ -81,6 +82,7 @@ class ManagedProvider {
       rule?.extension || '', rule?.tag || '', rule?.minimumRating || 0, rule?.keyword || '', query).map((asset) => ({
       ...asset,
       tags: JSON.parse(asset.tags),
+      folderIds: JSON.parse(asset.folderIds),
       sourceUrls: [...new Set([asset.sourceUrl, ...JSON.parse(asset.sourceUrls)])].filter(Boolean),
     }));
   }

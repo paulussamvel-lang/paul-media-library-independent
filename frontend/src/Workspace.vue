@@ -1,5 +1,6 @@
 <template>
-  <n-config-provider :theme="darkTheme" :preflight-style-disabled="true" class="workspace">
+  <n-config-provider :theme="palette === 'mist' ? null : darkTheme" :theme-overrides="themeOverrides"
+    :preflight-style-disabled="true" class="workspace">
     <aside v-if="!compact" class="library-nav" aria-label="素材库导航">
       <header class="nav-heading">
         <strong>Paul 素材库</strong>
@@ -44,7 +45,13 @@
       <AssetShelf v-if="selected" :key="selected.kind === 'smart' ? `${selected.id}:${selected.version}` :
         selected.id === '__trash__' ? 'trash' : 'folders'"
         :folder="selected" :folders="folders" :writable="entry.canOrganize"
-        :compact="compact" @expand="setCompact(false)" />
+        :compact="compact" @expand="setCompact(false)">
+        <template #appearance>
+          <select v-model="palette" class="palette-select" aria-label="配色" title="配色">
+            <option v-for="option in palettes" :key="option.id" :value="option.id">{{ option.name }}</option>
+          </select>
+        </template>
+      </AssetShelf>
       <div v-else class="workspace-message">
         <p v-if="failure" role="status">{{ failure }}</p>
         <p v-else role="status">正在打开图库…</p>
@@ -62,7 +69,7 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, shallowRef, watch } from 'vue';
 import { darkTheme, NButton, NConfigProvider, NInput, NModal } from 'naive-ui';
 import AssetShelf from './components/AssetShelf.vue';
 import FolderNavigation from './components/FolderNavigation.vue';
@@ -80,6 +87,33 @@ const folderInput = ref(null);
 const folderError = ref('');
 const savingFolder = ref(false);
 const trashFolder = { id: '__trash__', name: '回收站' };
+const palettes = [
+  { id: 'graphite', name: '石墨青' }, { id: 'midnight', name: '午夜蓝' },
+  { id: 'amber', name: '暖炭棕' }, { id: 'dusk', name: '暮紫' }, { id: 'mist', name: '雾白' },
+];
+const savedPalette = localStorage.getItem('paul-library-palette');
+const palette = ref(palettes.some(({ id }) => id === savedPalette) ? savedPalette : 'graphite');
+const themeOverrides = shallowRef(null);
+watch(palette, id => {
+  const root = document.documentElement;
+  root.dataset.palette = id;
+  localStorage.setItem('paul-library-palette', id);
+  const style = getComputedStyle(root);
+  const color = name => style.getPropertyValue('--' + name).trim();
+  themeOverrides.value = {
+    common: {
+      primaryColor: color('accent'), primaryColorHover: color('accent'), primaryColorPressed: color('accent'),
+      primaryColorSuppl: color('accent'), textColor1: color('text'), textColor2: color('text'),
+      textColor3: color('text-muted'), placeholderColor: color('text-muted'), borderColor: color('line'),
+      dividerColor: color('line'), inputColor: color('surface'), cardColor: color('surface'),
+      modalColor: color('surface'), bodyColor: color('ground'), hoverColor: color('hover'),
+    },
+    Button: {
+      textColorPrimary: color('accent-ink'), textColorHoverPrimary: color('accent-ink'),
+      textColorPressedPrimary: color('accent-ink'), textColorFocusPrimary: color('accent-ink'),
+    },
+  };
+}, { immediate: true });
 const folderChoices = computed(() => folderOptions(folders.value));
 const ordinarySelection = computed(() => folderChoices.value.some(({ id }) => id === selected.value?.id));
 const compact = ref(localStorage.getItem('paul-library-nav') === 'compact' ||
@@ -144,7 +178,7 @@ onMounted(initialize);
 
 <style scoped>
 .workspace { display: flex; min-width: 0; height: 100%; overflow: hidden; }
-.library-nav { width: 232px; max-width: 42vw; flex: none; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+.library-nav { width: 204px; max-width: 36vw; flex: none; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
 .nav-heading { min-height: 56px; display: flex; gap: 4px; align-items: center; padding-inline: 10px; border-bottom: 1px solid var(--line); }
 .nav-heading strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
 .nav-content { padding: 10px; overflow: auto; }
@@ -153,7 +187,7 @@ onMounted(initialize);
 .folder-edit { display: grid; gap: 6px; min-width: 0; padding: 8px 4px 10px; font-size: .8125rem; }
 .folder-edit select { width: 100%; min-height: 28px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: inherit; }
 .folder-edit-buttons { margin-top: 3px; justify-content: flex-end; }
-.folder-error { margin: 0; color: #ffb5ab; }
+.folder-error { margin: 0; color: var(--danger); }
 .trash-navigation { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--line); }
 .workspace-content { min-width: 0; flex: 1; display: flex; }
 .workspace-message { margin: auto; text-align: center; color: var(--text-muted); }
@@ -162,4 +196,6 @@ onMounted(initialize);
 .library-info dl { display: grid; grid-template-columns: max-content 1fr; gap: 12px; margin: 0; }
 .library-info dt { color: var(--text-muted); }
 .library-info dd { margin: 0; overflow-wrap: anywhere; }
+.palette-select { min-height: 28px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: var(--text); font-size: .75rem; }
+@media (max-width: 590px) { .nav-heading { flex-wrap: wrap; } .nav-heading strong { flex: 1 0 100%; } }
 </style>

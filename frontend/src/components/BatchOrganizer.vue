@@ -145,8 +145,9 @@ function undo() {
 .organizer {
   display: grid;
   gap: 7px;
-  padding: 0 20px 9px;
-  border-bottom: 1px solid #2a2a35;
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
 }
 
 .organizer-row {
@@ -160,26 +161,25 @@ function undo() {
 .organizer-message,
 .organizer-hint,
 .organizer-form select {
-  color: #c6c6d0;
+  color: var(--text-muted);
   font-size: 0.8125rem;
 }
 
 .organizer-error {
-  color: #ffb5ab;
+  color: var(--danger);
 }
 
 .organizer-form select {
   min-height: 28px;
   max-width: 100%;
   padding: 2px 6px;
-  border: 1px solid #484854;
+  border: 1px solid var(--line);
   border-radius: 4px;
-  background: #222229;
-  color-scheme: dark;
+  background: var(--surface);
 }
 
 .organizer-form select:focus-visible {
-  outline: 2px solid #a5bfff;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 

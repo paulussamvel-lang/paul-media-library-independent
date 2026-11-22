@@ -2,7 +2,7 @@ import PhotoSwipe from 'photoswipe';
 import 'photoswipe/style.css';
 import { originalUrl } from './api/index.js';
 
-function validLinks(list) {
+export function validLinks(list) {
   const allowed = new Set();
   for (const source of list) {
     try {

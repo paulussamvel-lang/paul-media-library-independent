@@ -1,5 +1,5 @@
 <template>
-  <span class="audio-tile" :class="{ playing: preview }">
+  <span class="audio-tile" :class="{ playing: preview, 'audio-wide': wide }">
     <span class="audio-metadata">
       <span>{{ item.ext.toUpperCase() }}</span>
       <span v-if="item.bpm > 0">{{ Math.round(item.bpm) }} BPM</span>
@@ -25,8 +25,9 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { thumbnailUrl } from '../api/index.js';
 import { audioWaveform } from '../audio-waveform.js';
+import { formatTime } from '../asset-model.js';
 
-const props = defineProps({ item: Object, preview: Object });
+const props = defineProps({ item: Object, preview: Object, wide: Boolean });
 const emit = defineEmits(['seek-hover']);
 const useThumbnail = ref(Boolean(props.item.hasThumbnail));
 const plot = ref(null);
@@ -40,11 +41,6 @@ const time = computed(() => {
   if (!Number.isFinite(duration) || duration <= 0) return '';
   return formatTime(Math.max(1, Math.round(duration)));
 });
-
-function formatTime(value) {
-  const seconds = Math.floor(value);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
 
 function reportPosition(event) {
   if (event.pointerType !== 'mouse' || event.buttons) return;
@@ -65,7 +61,7 @@ function observePlot() {
     if (!drawing) return;
     const { width, height } = drawing.canvas;
     const step = width / waveform.peaks.length;
-    drawing.fillStyle = '#9aadd9';
+    drawing.fillStyle = '#819587';
     waveform.peaks.forEach((peak, index) => {
       const bar = Math.max(2, peak * height);
       drawing.fillRect(index * step, (height - bar) / 2, step - 0.6, bar);
@@ -88,7 +84,7 @@ onUnmounted(() => {
   height: 100%;
   grid-template-rows: 23px minmax(0, 1fr) 28px;
   padding: 3px 9px;
-  background: #222532;
+  background: transparent;
 }
 
 .audio-metadata,
@@ -102,7 +98,7 @@ onUnmounted(() => {
 
 .audio-metadata,
 .audio-duration {
-  color: #c0c7da;
+  color: var(--text-muted);
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
 }
@@ -113,7 +109,7 @@ onUnmounted(() => {
 }
 
 .audio-elapsed {
-  color: #a7ebd8;
+  color: var(--accent);
 }
 
 .audio-name {
@@ -142,7 +138,7 @@ onUnmounted(() => {
 }
 
 .audio-plot img {
-  filter: grayscale(1) brightness(1.65) sepia(0.2) hue-rotate(178deg);
+  filter: grayscale(1) brightness(var(--wave-brightness));
 }
 
 .playing .audio-plot :is(img, canvas) {
@@ -151,15 +147,33 @@ onUnmounted(() => {
 
 .audio-baseline {
   height: 1px;
-  background: #51576a;
+  background: var(--line);
 }
 
 .audio-progress {
   position: absolute;
   inset-block: 0;
   left: 0;
-  border-right: 2px solid #8ce0c6;
-  background: #8ce0c626;
+  border-right: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
   pointer-events: none;
+}
+
+.audio-wide {
+  grid-template: minmax(0,1fr) / minmax(116px,1fr) minmax(54px,2fr) 62px 78px;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 10px;
+}
+.audio-wide .audio-caption { display: contents; }
+.audio-wide .audio-name { grid-area: 1 / 1; font-weight: 600; }
+.audio-wide .audio-plot { grid-area: 1 / 2; height: 100%; }
+.audio-wide .audio-metadata { grid-area: 1 / 3; justify-content: end; }
+.audio-wide .audio-metadata span:first-child { display: none; }
+.audio-wide .audio-duration { grid-area: 1 / 4; justify-self: end; }
+@media (max-width: 670px) {
+  .audio-wide { grid-template-columns: minmax(65px,.8fr) minmax(48px,1.5fr) 38px; gap: 6px; padding-inline: 5px; }
+  .audio-wide .audio-metadata, .audio-wide .audio-elapsed { display: none; }
+  .audio-wide .audio-duration { grid-column: 3; }
 }
 </style>

@@ -19,7 +19,7 @@ async function checkViewer() {
   if (!response) return false;
   const config = response.ok ? await response.json().catch(() => null) : null;
   if (config?.activeLibrary?.path !== library || config?.activeLibrary?.type !== 'managed' ||
-      !config.activeLibrary.canOrganize || config.organizationVersion !== 2) {
+      !config.activeLibrary.canOrganize || config.organizationVersion !== 2 || config.workspaceVersion !== 1) {
     throw new Error('端口 13003 正在运行另一个素材库查看器。请先关闭它，再打开桌面版。');
   }
   return true;

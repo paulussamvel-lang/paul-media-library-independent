@@ -43,9 +43,9 @@ onBeforeUnmount(() => {
 .media-preview {
   flex-shrink: 0;
   padding: 10px 20px 14px;
-  background: #1d1d25;
-  border-top: 1px solid #363643;
-  color: #eeeef3;
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+  color: var(--text);
 }
 
 .preview-header,
@@ -70,7 +70,7 @@ onBeforeUnmount(() => {
 }
 
 .preview-title span {
-  color: #b3b4c4;
+  color: var(--text-muted);
   font-size: 0.75rem;
 }
 
@@ -82,7 +82,6 @@ onBeforeUnmount(() => {
   display: block;
   width: min(100%, 38rem);
   height: 42px;
-  color-scheme: dark;
 }
 
 .video-player {
@@ -93,7 +92,7 @@ onBeforeUnmount(() => {
 }
 
 .preview-error {
-  color: #ffbfb5;
+  color: var(--danger);
   font-size: 0.875rem;
   margin: 6px 0;
 }

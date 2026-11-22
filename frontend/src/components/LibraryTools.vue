@@ -229,20 +229,19 @@ function useOriginal(event, id) {
 
 <style scoped>
 .library-tools, .report-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.library-tools { padding: 0 20px 8px; }
 .library-tool-modal { width: min(500px, calc(100vw - 24px)); max-height: 90vh; overflow-y: auto; }
 .duplicate-modal { width: min(690px, calc(100vw - 24px)); }
 .tool-stack { display: grid; gap: 9px; }
-.tool-subtle, .report-summary { color: #c6c6d0; font-size: .8125rem; }
-.tool-errors { color: #ffb5ab; }
-.import-progress { display: flex; align-items: center; gap: 10px; color: #d8def0; font-size: .8125rem; }
-.import-progress progress { flex: 1; height: 8px; accent-color: #8ce0c6; }
-.tool-stack select { min-height: 32px; padding: 5px; color: #eeeef3; background: #222229; border: 1px solid #484854; color-scheme: dark; }
+.tool-subtle, .report-summary { color: var(--text-muted); font-size: .8125rem; }
+.tool-errors { color: var(--danger); }
+.import-progress { display: flex; align-items: center; gap: 10px; color: var(--text-muted); font-size: .8125rem; }
+.import-progress progress { flex: 1; height: 8px; accent-color: var(--accent); }
+.tool-stack select { min-height: 32px; padding: 5px; color: var(--text); background: var(--surface); border: 1px solid var(--line); }
 .exact-list { max-height: 220px; overflow-y: auto; padding-left: 20px; }
 .exact-list li { padding: 2px 0; overflow-wrap: anywhere; }
-.exact-list a { color: #b2cbff; }
-.similar-pair { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid #33333f; }
-.comparison-image { min-width: 0; display: grid; gap: 3px; color: #e8e8ef; }
-.comparison-image img { width: 100%; height: 90px; object-fit: contain; background: #16161c; }
+.exact-list a { color: var(--accent); }
+.similar-pair { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.comparison-image { min-width: 0; display: grid; gap: 3px; color: var(--text); }
+.comparison-image img { width: 100%; height: 90px; object-fit: contain; background: var(--ground); }
 .comparison-image span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 </style>

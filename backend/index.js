@@ -57,6 +57,7 @@ api.get('/config', respond(() => ({
   activeLibraryIndex: runtime.index,
   activeLibrary: { ...runtime.entry, index: runtime.index, canOrganize: Boolean(organizer) },
   organizationVersion: organizer ? 2 : 0,
+  workspaceVersion: 1,
 })));
 api.get('/libraries', respond(() => runtime.libraries));
 api.get('/folders', respond(() => library.getFolders()));

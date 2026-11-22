@@ -21,10 +21,10 @@ function makeEntry(directory, key) {
       width: record.width, height: record.height, duration: record.duration,
       bpm: record.bpm, btime: record.btime,
       tags: Array.isArray(record.tags) ? record.tags.filter(tag => typeof tag === 'string') : [],
+      folderIds: Array.isArray(record.folders) ? record.folders : [],
       sourceUrl: typeof record.url === 'string' ? record.url : null,
       hasThumbnail: statSync(join(directory, `${record.name}_thumbnail.png`), { throwIfNoEntry: false })?.isFile() ?? false,
     },
-    folderIds: Array.isArray(record.folders) ? record.folders : [],
     note: typeof record.annotation === 'string' ? record.annotation : '',
   };
 }
@@ -81,8 +81,8 @@ class LegacyProvider {
     const scope = folderId === '__all__' ? null :
       includeChildren ? descendants(this.getFolders(), folderId) : new Set([folderId]);
     const needle = query.toLocaleLowerCase();
-    return this.#index().filter(({ item, folderIds, note }) =>
-      (!scope || folderIds.some(id => scope.has(id))) &&
+    return this.#index().filter(({ item, note }) =>
+      (!scope || item.folderIds.some(id => scope.has(id))) &&
       (!needle || [item.name, note, ...item.tags].some(text => text.toLocaleLowerCase().includes(needle))))
       .map(entry => entry.item);
   }

@@ -50,6 +50,6 @@ function toggle(id) {
   min-width: 0; flex: 1; text-align: left; border-radius: 5px; padding: 7px 9px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.folder-choice:hover { background: #2a3341; }
-.folder-choice[aria-current='page'] { background: #2b424a; color: #daf5fa; }
+.folder-choice:hover { background: var(--hover); }
+.folder-choice[aria-current='page'] { background: var(--selected); color: var(--accent); font-weight: 600; }
 </style>
