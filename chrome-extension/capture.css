@@ -3,6 +3,7 @@ body { margin: 0; min-width: 280px; }
 main { padding: 18px 22px; max-width: 460px; margin: auto; }
 h1 { font-size: 19px; font-weight: 650; margin: 0 0 13px; }
 p { margin: 0; }
+#frame { display: block; width: 100%; max-height: 208px; object-fit: contain; background: #101015; border-radius: 5px; margin-bottom: 12px; }
 form { display: grid; gap: 11px; }
 .field { display: grid; gap: 5px; }
 label, #hint { color: #c9c9d4; }

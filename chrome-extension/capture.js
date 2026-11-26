@@ -1,6 +1,7 @@
 const BASE = 'http://127.0.0.1:13003';
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-const requestId = new URLSearchParams(location.search).get('id');
+const params = new URLSearchParams(location.search);
+const requestId = params.get('id');
 const query = (selector) => document.getElementById(selector);
 const form = query('capture');
 const tagInput = query('tags');
@@ -61,14 +62,25 @@ function fileName(url) {
   }
 }
 
+function videoFrameName(time) {
+  const milliseconds = Math.round(time * 1000);
+  const hours = Math.floor(milliseconds / 3600000);
+  const minutes = Math.floor(milliseconds / 60000) % 60;
+  const seconds = Math.floor(milliseconds / 1000) % 60;
+  const position = [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join('-');
+  return `视频帧 ${position}.${String(milliseconds % 1000).padStart(3, '0')}`;
+}
+
 async function initialize() {
   if (!requestId) {
     query('hint').hidden = false;
     return;
   }
+  if (params.has('storageError')) throw new Error('本次收藏无法暂存，请关闭暂时不用的收藏窗口后重试。');
   const data = await chrome.storage.session.get(`capture:${requestId}`);
   record = data[`capture:${requestId}`];
-  if (!record || record.error) throw new Error(record?.error || '这次收藏已关闭，请重新右击图片。');
+  if (record?.kind === 'video') query('heading').textContent = '收藏视频帧';
+  if (!record || record.error) throw new Error(record?.error || '这次收藏已关闭，请重新右击要收藏的画面。');
   const image = new URL(record.imageUrl);
   if (!['http:', 'https:', 'data:'].includes(image.protocol)) throw new Error('这张图片没有可下载的地址。');
   const source = new URL(record.sourceUrl);
@@ -76,7 +88,11 @@ async function initialize() {
   query('source').textContent = source.href;
   query('source').href = source.href;
   query('source').title = source.href;
-  query('name').value = fileName(image);
+  query('name').value = record.kind === 'video' ? videoFrameName(record.time) : fileName(image);
+  if (record.kind === 'video') {
+    query('frame').src = image.href;
+    query('frame').hidden = false;
+  }
   query('open-library').href = BASE;
   let result;
   try {
@@ -147,12 +163,8 @@ async function submit(event) {
     folderId: query('folder').value || null, tags: [...chosen] };
   busy = true;
   query('save').disabled = true;
-  status('正在保存原图…');
+  status(record.kind === 'video' ? '正在保存视频帧…' : '正在保存原图…');
   try {
-    if (imageUrl.protocol !== 'data:' && !(imageUrl.protocol === 'http:' && imageUrl.hostname === '127.0.0.1')) {
-      const granted = await chrome.permissions.request({ origins: [`${imageUrl.protocol}//${imageUrl.hostname}/*`] });
-      if (!granted) throw new Error('没有授予读取图片所在网站的权限。');
-    }
     const image = await readImage(imageUrl.href);
     const preview = await previewFor(image).catch(() => ({}));
     const response = await fetch(`${BASE}/api/capture/image`, {
@@ -161,7 +173,8 @@ async function submit(event) {
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || '保存失败，请确认素材库服务正在运行。');
-    status(data.reused ? '已复用相同原件，来源和归类已保存。' : '已收藏原图和来源链接。');
+    const saved = record.kind === 'video' ? '已收藏视频帧和来源链接。' : '已收藏原图和来源链接。';
+    status(data.reused ? '已复用相同原件，来源和归类已保存。' : saved);
     query('open-library').hidden = false;
     chrome.storage.session.remove(`capture:${requestId}`).catch(() => {});
   } catch (error) {
