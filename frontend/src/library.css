@@ -3,18 +3,19 @@
   font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
   color: var(--text);
   background: var(--ground);
-  --ground: #212724;
-  --panel: #191f1c;
-  --surface: #2a322d;
+  --ground: #1c211f;
+  --panel: #171b19;
+  --surface: #292f2c;
   --hover: #303b34;
-  --line: #435047;
+  --line: #38413b;
   --text: #eef1eb;
-  --text-muted: #b3beb4;
-  --accent: #cfe47f;
+  --text-muted: #b4bfb6;
+  --accent: #cce68f;
   --accent-ink: #1b2613;
   --selected: #394532;
   --danger: #ffb8ac;
   --wave-brightness: 1.45;
+  --wave-columns: minmax(116px,1fr) minmax(54px,2fr) 62px 78px;
   --focus: var(--accent);
 }
 
@@ -39,7 +40,9 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-body { margin: 0; }
+body { margin: 0; -webkit-font-smoothing: antialiased; }
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+input { caret-color: var(--accent); }
 button, input, select { font: inherit; }
 button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible {
   outline: 2px solid var(--focus);
@@ -58,3 +61,5 @@ p { margin-block: 0; }
 .photo-source { padding: 12px 10px; color: #edf4fa; align-self: start; background: #1d232d; }
 .photo-source summary { cursor: pointer; }
 .photo-source a { display: block; max-width: min(270px, 52vw); padding: 4px 0; overflow-wrap: anywhere; }
+
+@media (max-width: 670px) { :root { --wave-columns: minmax(65px,.8fr) minmax(48px,1.5fr) 38px; } }

@@ -3,8 +3,9 @@
     :preflight-style-disabled="true" class="workspace">
     <aside v-if="!compact" class="library-nav" aria-label="素材库导航">
       <header class="nav-heading">
+        <svg class="library-mark" viewBox="0 0 28 28" width="27" height="27" fill="none" aria-hidden="true"><rect width="28" height="28" rx="8" fill="currentColor"/><path d="m6 11 8-4 8 4-8 4-8-4Zm0 4 8 4 8-4m-16 4 8 4 8-4" stroke="var(--accent-ink)" stroke-width="1.55" stroke-linejoin="round" stroke-linecap="round"/></svg>
         <strong>Paul 素材库</strong>
-        <n-button size="tiny" quaternary aria-label="图库信息" @click="information = true">图库信息</n-button>
+        <n-button size="tiny" quaternary aria-label="图库信息" title="图库信息" @click="information = true"><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7.2"/><path d="M10 9v5m0-8v1"/></svg></n-button>
         <n-button size="tiny" quaternary aria-label="收起侧边栏" @click="setCompact(true)">
           <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
             <path d="m9 3-4 4 4 4" fill="none" stroke="currentColor" stroke-width="1.5"/>
@@ -178,10 +179,12 @@ onMounted(initialize);
 
 <style scoped>
 .workspace { display: flex; min-width: 0; height: 100%; overflow: hidden; }
-.library-nav { width: 204px; max-width: 36vw; flex: none; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
-.nav-heading { min-height: 56px; display: flex; gap: 4px; align-items: center; padding-inline: 10px; border-bottom: 1px solid var(--line); }
-.nav-heading strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .85rem; }
-.nav-content { padding: 10px; overflow: auto; }
+.library-nav { width: clamp(188px, 18vw, 244px); max-width: 36vw; flex: none; display: flex; flex-direction: column; background: var(--panel); border-right: 1px solid var(--line); }
+.nav-heading { min-height: 62px; display: flex; gap: 7px; align-items: center; padding-inline: 14px; border-bottom: 1px solid var(--line); }
+.nav-heading strong { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .96rem; font-weight: 680; }
+.nav-heading :deep(.n-button) { flex: 0 0 24px; width: 24px; padding-inline: 0; }
+.library-mark { color: var(--accent); flex: none; }
+.nav-content { padding: 14px 10px; overflow: auto; }
 .folder-actions, .folder-edit-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .folder-actions { justify-content: space-between; margin-bottom: 6px; }
 .folder-edit { display: grid; gap: 6px; min-width: 0; padding: 8px 4px 10px; font-size: .8125rem; }

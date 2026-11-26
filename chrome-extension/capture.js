@@ -8,6 +8,16 @@ const tagInput = query('tags');
 const chosen = new Set();
 let record;
 let busy = false;
+let imageDownload;
+function captureImage() {
+  if (!imageDownload) {
+    imageDownload = readImage(record.imageUrl).catch(error => {
+      imageDownload = undefined;
+      throw error;
+    });
+  }
+  return imageDownload;
+}
 
 function status(message, error = false) {
   const target = query('status');
@@ -85,13 +95,22 @@ async function initialize() {
   if (!['http:', 'https:', 'data:'].includes(image.protocol)) throw new Error('这张图片没有可下载的地址。');
   const source = new URL(record.sourceUrl);
   if (!['http:', 'https:'].includes(source.protocol)) throw new Error('没有可保存的网页来源。');
-  query('source').textContent = source.href;
+  query('source').textContent = source.hostname;
   query('source').href = source.href;
   query('source').title = source.href;
   query('name').value = record.kind === 'video' ? videoFrameName(record.time) : fileName(image);
+  const frame = query('frame');
+  frame.addEventListener('load', () => {
+    query('preview').hidden = false;
+    const details = query('frame-details');
+    details.textContent = `${frame.naturalWidth} × ${frame.naturalHeight}`;
+    details.hidden = false;
+  }, { once: true });
   if (record.kind === 'video') {
-    query('frame').src = image.href;
-    query('frame').hidden = false;
+    frame.src = image.href;
+  } else {
+    // Reuse the size-limited download on save. A failed preview leaves the form usable.
+    captureImage().then(blob => { frame.src = URL.createObjectURL(blob); }).catch(() => {});
   }
   query('open-library').href = BASE;
   let result;
@@ -158,14 +177,13 @@ async function previewFor(blob) {
 async function submit(event) {
   event.preventDefault();
   if (busy || !addEnteredTags()) return;
-  const imageUrl = new URL(record.imageUrl);
   const values = { requestId, name: query('name').value.trim(), sourceUrl: record.sourceUrl,
     folderId: query('folder').value || null, tags: [...chosen] };
   busy = true;
   query('save').disabled = true;
   status(record.kind === 'video' ? '正在保存视频帧…' : '正在保存原图…');
   try {
-    const image = await readImage(imageUrl.href);
+    const image = await captureImage();
     const preview = await previewFor(image).catch(() => ({}));
     const response = await fetch(`${BASE}/api/capture/image`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(30000),
@@ -175,6 +193,7 @@ async function submit(event) {
     if (!response.ok) throw new Error(data.error || '保存失败，请确认素材库服务正在运行。');
     const saved = record.kind === 'video' ? '已收藏视频帧和来源链接。' : '已收藏原图和来源链接。';
     status(data.reused ? '已复用相同原件，来源和归类已保存。' : saved);
+    query('save').textContent = '已收藏';
     query('open-library').hidden = false;
     chrome.storage.session.remove(`capture:${requestId}`).catch(() => {});
   } catch (error) {

@@ -3,10 +3,17 @@
     <header class="shelf-toolbar" aria-label="素材工具栏">
       <n-button v-if="compact" size="small" secondary aria-label="展开侧边栏" @click="$emit('expand')">文件夹</n-button>
       <n-input v-model:value="query" clearable size="small" maxlength="160" class="shelf-search"
-          placeholder="输入名称、标签或备注" :input-props="{ 'aria-label': '搜索素材' }"/>
+          placeholder="搜索名称、标签或备注" :input-props="{ 'aria-label': '搜索素材' }">
+        <template #prefix><svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg></template>
+      </n-input>
       <div class="view-switch" role="group" aria-label="素材视图">
         <button v-for="item in views" :key="item.id" type="button" :aria-pressed="mode === item.id"
-          :disabled="picking && item.id !== 'list'" @click="setView(item.id)">{{ item.name }}</button>
+          :disabled="picking && item.id !== 'list'" @click="setView(item.id)">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path v-if="item.id === 'waveform'" d="M2 9v2m4-6v10m4-13v16m4-12v8m4-6v4"/>
+            <path v-else-if="item.id === 'waterfall'" d="M2.5 3h6v5h-6zM2.5 11h6v6h-6zM11.5 3h6v8h-6zM11.5 14h6v3h-6z"/>
+            <path v-else d="M3 5h2m3 0h9M3 10h2m3 0h9M3 15h2m3 0h9"/>
+          </svg>{{ item.name }}</button>
       </div>
       <slot name="appearance"/>
     </header>
@@ -53,6 +60,9 @@
       <div class="shelf-results">
         <div v-if="mode === 'list' && visible.length && !busy" class="row-columns list-head" aria-hidden="true">
           <span>名称</span><span>格式</span><span>文件夹</span><span>标签</span><span>时长</span>
+        </div>
+        <div v-if="mode === 'waveform' && visible.length && !busy" class="wave-head list-head" aria-hidden="true">
+          <span>名称</span><span>波形</span><span>BPM</span><span>时长</span>
         </div>
         <section ref="frame" class="asset-scroll" aria-label="素材结果" :aria-busy="busy" @scroll="recordScroll">
           <div class="empty-message" v-if="busy" role="status">正在读取素材…</div>
@@ -412,10 +422,10 @@ function showFallback(asset, event) {
 
 <style scoped>
 .asset-workspace { display: flex; flex-direction: column; width: 100%; min-width: 0; overflow: hidden; }
-.shelf-toolbar { min-height: 56px; padding: 8px 16px; background: var(--panel); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.shelf-toolbar { min-height: 62px; padding: 9px 16px; background: var(--panel); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .shelf-search { flex: 1 1 176px; min-width: 0; width: auto; }
 .view-switch { display: flex; flex: none; padding: 2px; gap: 2px; background: var(--surface); border: 1px solid var(--line); border-radius: 7px; }
-.view-switch button { background: transparent; color: var(--text-muted); border: 0; border-radius: 4px; padding: 3px 9px; min-height: 24px; white-space: nowrap; cursor: pointer; font-size: .75rem; }
+.view-switch button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; color: var(--text-muted); border: 0; border-radius: 4px; padding: 3px 9px; min-height: 28px; white-space: nowrap; cursor: pointer; font-size: .75rem; }
 .view-switch button:not(:disabled):hover { background: var(--hover); color: var(--text); }
 .view-switch button[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); font-weight: 650; }
 .view-switch button[aria-pressed='true']:hover { background: var(--accent); color: var(--accent-ink); }
@@ -424,11 +434,14 @@ function showFallback(asset, event) {
 .shelf-heading, .shelf-actions { flex-wrap: wrap; }
 .shelf-heading { justify-content: space-between; }
 .folder-heading { flex: 1 1 135px; }
-.shelf-heading h1 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 1.2rem; font-weight: 650; }
+.shelf-heading h1 { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(1.3rem, 2vw, 1.65rem); letter-spacing: -.025em; line-height: 1.35; font-weight: 650; }
 .result-count { flex: none; font-size: .75rem; color: var(--text-muted); }
 .gallery-controls { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.media-switch { background: transparent; border: 0; padding: 0; gap: 4px; }
+.media-switch button { border-radius: 5px; min-height: 25px; }
+.media-switch button[aria-pressed='true'], .media-switch button[aria-pressed='true']:hover { background: var(--selected); color: var(--text); }
 .subfolders { display: flex; align-items: center; gap: 6px; font-size: .8125rem; color: var(--text-muted); }
-.shelf-controls { padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.shelf-controls { padding: 16px 16px 12px; border-bottom: 1px solid var(--line); }
 .tempo-controls { display: flex; align-items: center; gap: 8px; }
 .tempo-controls { flex-wrap: wrap; font-size: .8125rem; margin: 8px 0 0; padding: 0; border: 0; min-width: 0; color: var(--text-muted); }
 .tempo-controls input, .tempo-controls select { min-height: 30px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel); color: inherit; padding: 3px 6px; }
@@ -439,7 +452,7 @@ function showFallback(asset, event) {
 .asset-scroll { flex: 1; min-height: 0; overflow: hidden auto; }
 .empty-message { display: grid; justify-items: center; gap: 8px; padding: 34px 8px; color: var(--text-muted); }
 .shelf-plane { position: relative; }
-.asset-tile { position: absolute; border: 0; padding: 0; border-radius: 6px; overflow: hidden; background: var(--surface); color: inherit; text-align: start; cursor: pointer; }
+.asset-tile { position: absolute; border: 0; padding: 0; border-radius: 9px; overflow: hidden; background: var(--surface); color: inherit; text-align: start; cursor: pointer; }
 .asset-tile[draggable='true'] { cursor: grab; }
 .asset-tile[draggable='true']:active { cursor: grabbing; }
 .asset-tile:hover { background: var(--hover); }
@@ -455,7 +468,11 @@ function showFallback(asset, event) {
 .wave-row.auditioning, .list-row[aria-pressed='true'] { background: var(--selected); }
 .list-row[aria-pressed='true']:not(:focus-visible) { outline: none; }
 .row-columns { display: grid; grid-template-columns: minmax(90px,2fr) 46px minmax(64px,1.1fr) minmax(55px,1fr) 53px; gap: 10px; align-items: center; padding-inline: 9px; }
-.list-head { margin: 0 16px; min-height: 34px; background: var(--panel); color: var(--text-muted); font-size: .75rem; }
+.list-head { margin: 0 16px; min-height: 36px; background: var(--panel); color: var(--text-muted); font-size: .75rem; }
+.list-row:nth-child(even):not(:hover):not([aria-pressed=true]) { background: color-mix(in srgb, var(--surface) 42%, transparent); }
+.wave-head { display: grid; grid-template-columns: var(--wave-columns); gap: 10px; padding-inline: 10px; align-items: center; }
+.wave-head span:nth-last-child(-n+2) { text-align: end; }
+@media (max-width: 670px) { .wave-head { padding-inline: 5px; gap: 6px; } .wave-head span:nth-child(3) { display: none; } }
 .list-name { display: flex; min-width: 0; align-items: center; gap: 8px; font-size: .8125rem; font-weight: 550; }
 .list-name > span:last-child, .row-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .row-meta { font-size: .75rem; color: var(--text-muted); }
@@ -463,9 +480,9 @@ function showFallback(asset, event) {
 .row-check { position: relative; flex: none; width: 14px; height: 14px; border-radius: 3px; border: 1px solid var(--text-muted); }
 .list-row[aria-pressed='true'] .row-check { background: var(--accent); border-color: var(--accent); }
 .list-row[aria-pressed='true'] .row-check::after { content: ''; position: absolute; width: 4px; height: 8px; left: 4px; top: 1px; border: solid var(--accent-ink); border-width: 0 2px 2px 0; transform: rotate(45deg); }
-.asset-details { flex: none; width: clamp(152px, 18vw, 230px); border-left: 1px solid var(--line); padding: 14px 12px; background: var(--panel); overflow: auto; }
-.asset-details h2 { margin: 0 0 10px; font-size: .875rem; font-weight: 650; }
-.asset-details h3 { margin: 8px 0; font-size: .8125rem; overflow-wrap: anywhere; }
+.asset-details { flex: none; width: clamp(152px, 18vw, 230px); border-left: 1px solid var(--line); padding: 18px 14px; background: var(--panel); overflow: auto; }
+.asset-details h2 { margin: 0 0 14px; font-size: .875rem; font-weight: 650; }
+.asset-details h3 { margin: 12px 0; font-size: .9rem; overflow-wrap: anywhere; }
 .asset-details :is(img, video) { display: block; width: 100%; max-height: 165px; object-fit: contain; border-radius: 4px; background: var(--ground); }
 .asset-details .video-still:not([style]) { display: none; }
 .asset-details dl { display: grid; grid-template-columns: max-content minmax(0,1fr); gap: 9px; margin: 12px 0 0; font-size: .75rem; }
