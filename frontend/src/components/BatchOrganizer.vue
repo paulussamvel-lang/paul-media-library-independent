@@ -136,6 +136,19 @@ function apply() {
     renameMode: renameMode.value, pattern: pattern.value, replacement: replacement.value });
 }
 
+defineExpose({
+  setLatestEdit(edit) { latest.value = edit; },
+  reportTrash(edit) {
+    latest.value = edit;
+    failed.value = false;
+    message.value = '已移入回收站 1 项';
+  },
+  reportTrashError(error) {
+    failed.value = true;
+    message.value = error;
+  },
+});
+
 function undo() {
   if (!busy.value && latest.value) run('undo', { editId: latest.value.id });
 }

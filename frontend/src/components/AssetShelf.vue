@@ -1,5 +1,5 @@
 <template>
-  <div class="asset-workspace">
+  <div ref="workspace" class="asset-workspace">
     <header class="shelf-toolbar" aria-label="素材工具栏">
       <n-button v-if="compact" size="small" secondary aria-label="展开侧边栏" @click="$emit('expand')">文件夹</n-button>
       <n-input v-model:value="query" clearable size="small" maxlength="160" class="shelf-search"
@@ -29,6 +29,8 @@
           </label>
           <n-button v-if="!trash" size="small" secondary :type="tempoFilter ? 'primary' : 'default'"
             :aria-expanded="expanded" aria-controls="tempo-controls" @click="expanded = !expanded">BPM 筛选</n-button>
+          <n-button v-if="writable && !trash && !picking" size="small" secondary
+            :disabled="!renameTarget || busy || !!edit" @click="renameSelected">重命名</n-button>
           <LibraryTools v-if="writable && !trash" :folders="folders" :selected-folder-id="folder.id" @change="refresh++" />
           <n-button v-if="mode !== 'list'" class="detail-toggle" size="tiny" quaternary :aria-pressed="details"
             @click="details = !details">{{ details ? '隐藏详情' : '显示详情' }}</n-button>
@@ -78,19 +80,22 @@
               class="asset-tile" :class="[`asset-${position.asset.kind}`, {
                 'row-columns list-row': mode === 'list', 'wave-row': mode === 'waveform',
                 auditioning: audioId === position.asset.id,
+                named: !picking && highlighted === position.asset.id,
               }]"
               :title="position.asset.name" :aria-label="labelOf(position.asset)"
               :aria-pressed="picking ? selection.has(position.asset.id) :
-                mode === 'waterfall' ? detailAsset?.id === position.asset.id : undefined"
+                highlighted === position.asset.id"
+              :data-asset-id="position.asset.id"
               :style="positionStyle(position)"
               :draggable="draggable(position.asset)"
               @pointerenter="considerAudition(position.asset, $event)" @pointerleave="stopAudition"
-              @pointerdown="stopAudition" @dragstart="drag(position.asset, $event)"
+              @pointerdown="onTileDown" @dragstart="drag(position.asset, $event)"
               @click="view(position.asset, $event)" @dblclick="openGalleryAsset(position.asset, $event)"
+              @keydown.f2.prevent="beginRename(position.asset, $event.currentTarget)"
               @keydown.enter="onAssetEnter(position.asset, $event)">
               <template v-if="mode === 'list'">
                 <span class="list-name">
-                  <span v-if="picking" class="row-check" aria-hidden="true"></span><span>{{ position.asset.name }}</span>
+                  <span v-if="picking" class="row-check" aria-hidden="true"></span><span data-asset-name>{{ position.asset.name }}</span>
                 </span>
                 <span class="row-meta">{{ position.asset.ext.toUpperCase() }}</span>
                 <span class="row-meta" :title="folderNames(position.asset)">{{ folderNames(position.asset) }}</span>
@@ -111,11 +116,17 @@
                     @loadeddata="showVideoStill" />
                 </span>
                 <span class="card-caption">
-                  <span class="card-name">{{ position.asset.name }}</span>
+                  <span class="card-name" data-asset-name>{{ position.asset.name }}</span>
                   <span class="card-format">{{ position.asset.ext.toUpperCase() }}</span>
                 </span>
               </template>
             </button>
+            <div v-if="edit" class="inline-rename" :style="edit.style">
+              <input ref="nameInput" v-model="edit.value" aria-label="素材新名称" maxlength="160" title="回车保存，Esc 取消"
+                :readonly="edit.pending" :aria-invalid="!!edit.error" :aria-describedby="edit.error ? 'rename-error' : undefined"
+                @keydown="editKey" @blur="cancelRename(false)" />
+              <p v-if="edit.error" id="rename-error" role="alert">{{ edit.error }}</p>
+            </div>
           </div>
         </section>
       </div>
@@ -148,21 +159,24 @@
       <progress :value="audioPreview?.progress ?? 0" max="1" aria-label="试听进度"></progress>
       <span>{{ audioPreview ? formatTime(audioPreview.seconds) + ' / ' + formatTime(audioPreview.duration) : '—' }}</span>
     </div>
-    <MediaPreview v-if="player" :key="player.id" :item="player" @close="closePlayer"/>
-    <BatchOrganizer v-if="writable" :selecting="picking" :ids="busy ? [] : selectedIds"
+    <MediaPreview v-if="player" :key="player.id" :item="player" :start-at="playerStart" @close="closePlayer"/>
+    <Teleport v-if="photoTrashError" to="body">
+      <p class="photo-trash-error" role="alert">{{ photoTrashError }}</p>
+    </Teleport>
+    <BatchOrganizer ref="organizer" v-if="writable" :selecting="picking" :ids="busy ? [] : selectedIds"
       :total="busy ? 0 : visible.length" :folders="folders" :trash="trash" @toggle="switchSelection"
       @select-all="selectResults" @clear="selection.clear()" @change="refresh++" />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, shallowRef, watch } from 'vue';
 import { NButton, NInput } from 'naive-ui';
 import AudioTile from './AudioTile.vue';
 import BatchOrganizer from './BatchOrganizer.vue';
 import LibraryTools from './LibraryTools.vue';
 import MediaPreview from './MediaPreview.vue';
-import { getImages, originalUrl, thumbnailUrl } from '../api/index.js';
+import { getImages, originalUrl, saveOrganization, thumbnailUrl } from '../api/index.js';
 import { defaultView, displayAsset, formatTime, layOutRows, layOutShelf } from '../asset-model.js';
 import { folderOptions } from '../folders.js';
 import { showPhotos, validLinks } from '../photo-preview.js';
@@ -172,6 +186,14 @@ const props = defineProps({ folder: { type: Object, required: true }, folders: A
 defineEmits(['expand']);
 const full = shallowRef([]);
 const player = ref(null);
+const playerStart = ref(0);
+const edit = ref(null);
+const nameInput = ref(null);
+const organizer = ref(null);
+const workspace = ref(null);
+const photoTrashError = ref('');
+let trashPending = false;
+let nameClickAt = -Infinity;
 const smart = computed(() => props.folder.kind === 'smart');
 const trash = computed(() => props.folder.id === '__trash__');
 const children = ref(false);
@@ -232,6 +254,7 @@ const visible = computed(() => {
   }
   return filtered.value;
 });
+const renameTarget = computed(() => visible.value.find(asset => asset.id === highlighted.value));
 const detailAsset = computed(() => {
   const id = mode.value === 'waveform' ? audioId.value ?? highlighted.value : highlighted.value;
   return visible.value.find(asset => asset.id === id) ?? visible.value[0];
@@ -283,6 +306,9 @@ watch([() => props.folder.id, children, text, refresh], async ([id, descend, sea
 }, { immediate: true });
 watch([low, high, order], clearInteraction);
 watch([mode, mediaType], resetViewport);
+watch(onscreen, positions => {
+  if (edit.value && !positions.some(row => row.asset.id === edit.value.id)) edit.value = null;
+});
 
 onMounted(() => {
   watchSize = new ResizeObserver(() => {
@@ -291,12 +317,14 @@ onMounted(() => {
   });
   watchSize.observe(frame.value);
   window.addEventListener('blur', stopAudition);
+  window.addEventListener('keydown', trashPreviewOnDelete);
   document.addEventListener('visibilitychange', stopAudition);
 });
 onUnmounted(() => {
   watchSize?.disconnect();
   clearInteraction();
   window.removeEventListener('blur', stopAudition);
+  window.removeEventListener('keydown', trashPreviewOnDelete);
   document.removeEventListener('visibilitychange', stopAudition);
 });
 
@@ -321,6 +349,8 @@ function clearInteraction() {
   resetViewport();
 }
 function resetViewport() {
+  edit.value = null;
+  nameClickAt = -Infinity;
   stopAudition();
   scroll.offset = 0;
   if (frame.value) frame.value.scrollTop = 0;
@@ -372,7 +402,105 @@ function considerAudition(asset, pointer) {
     startAudition(asset.id, pointer.currentTarget);
   }
 }
+function onTileDown(event) {
+  if (!event.target.closest('[data-asset-name]')) stopAudition();
+}
+
+async function renameSelected() {
+  const asset = renameTarget.value;
+  if (!asset || !frame.value) return;
+  const selector = `[data-asset-id="${CSS.escape(asset.id)}"]`;
+  let tile = frame.value.querySelector(selector);
+  if (!tile) {
+    const position = layout.value.positions.find(row => row.asset.id === asset.id);
+    if (!position) return;
+    frame.value.scrollTop = position.top;
+    recordScroll();
+    await nextTick();
+    tile = frame.value?.querySelector(selector);
+  }
+  if (tile && renameTarget.value?.id === asset.id) {
+    tile.scrollIntoView({ block: 'nearest' });
+    beginRename(asset, tile);
+  }
+}
+
+function beginRename(asset, tile) {
+  if (!props.writable || trash.value || picking.value || busy.value || edit.value?.pending) return;
+  if (asset.kind === 'audio' && player.value?.id !== asset.id) openPreview(asset, { currentTarget: tile });
+  const label = tile.querySelector('[data-asset-name]');
+  const bounds = label.getBoundingClientRect();
+  const plane = tile.parentElement.getBoundingClientRect();
+  const width = Math.min(plane.width - 8, Math.max(180, bounds.width));
+  const left = Math.max(4, Math.min(bounds.left - plane.left - 4, plane.width - width - 4));
+  const suffix = '.' + asset.ext;
+  const ending = asset.ext && asset.name.toLowerCase().endsWith(suffix.toLowerCase())
+    ? asset.name.slice(-suffix.length) : '';
+  highlighted.value = asset.id;
+  edit.value = { id: asset.id, value: ending ? asset.name.slice(0, -ending.length) : asset.name,
+    ending, tile, error: '', pending: false, style: { left: left + 'px',
+      top: Math.max(0, bounds.top - plane.top + (bounds.height - 32) / 2) + 'px', width: width + 'px' } };
+  nextTick(() => { nameInput.value?.focus({ preventScroll: true }); nameInput.value?.select(); });
+}
+
+function cancelRename(restoreFocus) {
+  const current = edit.value;
+  if (!current || current.pending) return;
+  edit.value = null;
+  nameClickAt = -Infinity;
+  if (restoreFocus) current.tile.focus({ preventScroll: true });
+}
+
+function editKey(event) {
+  if (event.isComposing || event.keyCode === 229) return;
+  if (event.key === 'Enter' || event.key === 'Escape') {
+    event.preventDefault();
+    if (event.key === 'Enter') saveName();
+    else cancelRename(true);
+  }
+}
+
+async function saveName() {
+  const current = edit.value;
+  if (!current || current.pending) return;
+  const pattern = current.value.trim().normalize('NFC');
+  current.pending = true;
+  current.error = '';
+  try {
+    const result = await saveOrganization('apply', { action: 'rename', ids: [current.id], renameMode: 'sequence', pattern });
+    const name = pattern + current.ending;
+    const rows = full.value.map(item => item.id === current.id ? { ...item, name } : item);
+    full.value = rows;
+    if (player.value?.id === current.id) player.value = { ...player.value, name };
+    organizer.value?.setLatestEdit(result.latestEdit);
+    if (edit.value === current) {
+      current.pending = false;
+      cancelRename(true);
+    }
+    if (text.value || smart.value) {
+      // Reevaluate name-based matches without unmounting the playing track.
+      const matching = await getImages(props.folder.id, children.value, undefined, text.value);
+      if (full.value === rows) full.value = matching.map(displayAsset);
+    }
+  } catch (error) {
+    current.pending = false;
+    current.error = error.message;
+  }
+}
+
 function view(asset, event) {
+  if (props.writable && !trash.value && !picking.value && event.target.closest('[data-asset-name]')) {
+    const now = performance.now();
+    if (highlighted.value === asset.id && nameClickAt !== -Infinity && now - nameClickAt >= 350 && event.detail === 1) {
+      beginRename(asset, event.currentTarget);
+      return;
+    }
+    nameClickAt = now;
+    highlighted.value = asset.id;
+    if (asset.kind === 'audio' && player.value?.id !== asset.id) openPreview(asset, event);
+    return;
+  }
+  nameClickAt = -Infinity;
   stopAudition();
   if (picking.value) {
     if (selection.has(asset.id)) selection.delete(asset.id);
@@ -394,6 +522,7 @@ function onAssetEnter(asset, event) {
 }
 function openPreview(asset, event) {
   if (asset.kind === 'file' || photos) return;
+  playerStart.value = audioId.value === asset.id ? audioPreview.value?.seconds ?? 0 : 0;
   stopAudition();
   highlighted.value = asset.id;
   returnFocus = event.currentTarget;
@@ -401,12 +530,47 @@ function openPreview(asset, event) {
     player.value = null;
     photos = showPhotos(visible.value, asset.id, () => {
       photos = null;
+      photoTrashError.value = '';
       returnFocus?.focus({ preventScroll: true });
     });
   } else if (asset.kind === 'audio' || asset.kind === 'video') {
     player.value = asset;
   }
 }
+function trashPreviewOnDelete(event) {
+  if (!props.writable || trash.value || picking.value || busy.value || edit.value ||
+      event.defaultPrevented || event.isComposing || event.keyCode === 229 || event.repeat ||
+      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+      (event.key !== 'Delete' && event.key !== 'Backspace')) return;
+  const target = event.target;
+  if (!(target instanceof Element) ||
+      target.closest('input, textarea, select, [contenteditable], [role="textbox"], [role="dialog"]:not(.pswp)')) return;
+  const photo = photos;
+  const id = photo?.currSlide?.data.assetId ?? player.value?.id;
+  if (!id || (photo ? !photo.element?.contains(target) : !workspace.value?.contains(target) && target !== document.body)) return;
+  event.preventDefault();
+  if (!trashPending) void trashPreview(id, photo);
+}
+
+async function trashPreview(id, photo) {
+  trashPending = true;
+  photoTrashError.value = '';
+  try {
+    const result = await saveOrganization('apply', { action: 'trash', ids: [id] });
+    if (photo && photos === photo) photo.close();
+    if (player.value?.id === id) closePlayer();
+    full.value = full.value.filter(asset => asset.id !== id);
+    selection.delete(id);
+    if (highlighted.value === id) highlighted.value = null;
+    organizer.value?.reportTrash(result.latestEdit);
+  } catch (error) {
+    if (photo && photos === photo) photoTrashError.value = error.message;
+    else organizer.value?.reportTrashError(error.message);
+  } finally {
+    trashPending = false;
+  }
+}
+
 function closePlayer() {
   player.value = null;
   returnFocus?.focus({ preventScroll: true });
@@ -421,6 +585,11 @@ function showFallback(asset, event) {
 </script>
 
 <style scoped>
+.photo-trash-error {
+  position: fixed; z-index: 100001; bottom: 20px; left: 50%; transform: translateX(-50%);
+  max-width: calc(100vw - 32px); padding: 8px 12px; border-radius: 6px;
+  background: var(--panel); color: var(--danger);
+}
 .asset-workspace { display: flex; flex-direction: column; width: 100%; min-width: 0; overflow: hidden; }
 .shelf-toolbar { min-height: 62px; padding: 9px 16px; background: var(--panel); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .shelf-search { flex: 1 1 176px; min-width: 0; width: auto; }
@@ -452,6 +621,11 @@ function showFallback(asset, event) {
 .asset-scroll { flex: 1; min-height: 0; overflow: hidden auto; }
 .empty-message { display: grid; justify-items: center; gap: 8px; padding: 34px 8px; color: var(--text-muted); }
 .shelf-plane { position: relative; }
+.inline-rename { position: absolute; z-index: 2; }
+.inline-rename input { width: 100%; height: 32px; padding: 4px 7px; font-size: .8125rem; border-radius: 5px; border: 1px solid var(--accent); color: var(--text); background: var(--panel); }
+.inline-rename p { margin-top: 4px; padding: 4px 7px; background: var(--panel); color: var(--danger); font-size: .75rem; }
+.asset-tile.named { box-shadow: inset 0 0 0 1px var(--accent); }
+
 .asset-tile { position: absolute; border: 0; padding: 0; border-radius: 9px; overflow: hidden; background: var(--surface); color: inherit; text-align: start; cursor: pointer; }
 .asset-tile[draggable='true'] { cursor: grab; }
 .asset-tile[draggable='true']:active { cursor: grabbing; }

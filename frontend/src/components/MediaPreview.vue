@@ -18,7 +18,7 @@
     <video v-else-if="item.kind === 'video'" ref="player" class="video-player"
       :src="src" :aria-label="item.name" autoplay controls playsinline preload="metadata" @error="failed = true" />
     <audio v-else ref="player" class="audio-player"
-      :src="src" :aria-label="item.name" autoplay controls preload="metadata" @error="failed = true" />
+      :src="src" :aria-label="item.name" autoplay controls preload="metadata" @loadedmetadata.once="resumeAudition" @error="failed = true" />
   </section>
 </template>
 
@@ -27,12 +27,18 @@ import { computed, onBeforeUnmount, ref } from 'vue';
 import { NButton } from 'naive-ui';
 import { originalUrl } from '../api/index.js';
 
-const props = defineProps({ item: { type: Object, required: true } });
+const props = defineProps({ item: { type: Object, required: true }, startAt: { type: Number, default: 0 } });
 defineEmits(['close']);
 
 const failed = ref(false);
 const player = ref(null);
 const src = computed(() => originalUrl(props.item.id));
+
+function resumeAudition() {
+  if (props.startAt > 0 && Number.isFinite(player.value.duration)) {
+    player.value.currentTime = Math.min(props.startAt, player.value.duration);
+  }
+}
 
 onBeforeUnmount(() => {
   player.value?.pause();

@@ -13,7 +13,7 @@
       <span v-if="preview" class="audio-progress" :style="{ width: `${preview.progress * 100}%` }"></span>
     </span>
     <span class="audio-caption">
-      <span class="audio-name">{{ item.name }}</span>
+      <span class="audio-name" data-asset-name>{{ item.name }}</span>
       <span v-if="time" class="audio-duration">
         <span v-if="preview" class="audio-elapsed">{{ formatTime(preview.seconds) }} / </span>{{ time }}
       </span>

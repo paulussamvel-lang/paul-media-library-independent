@@ -26,6 +26,7 @@ export function showPhotos(assets, selected, onClose) {
   const viewer = new PhotoSwipe({
     index,
     dataSource: photos.map(row => ({
+      assetId: row.id,
       src: originalUrl(row.id),
       alt: row.name,
       width: row.width || 640,
